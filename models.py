@@ -53,3 +53,9 @@ async def update_notifications_status(telegram_id: int, is_notifications: bool):
 async def async_model_main():
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+
+
+async def select_all_users():
+    async with async_session() as session:
+        users = await session.execute(select(User))
+    return users.scalars().all()

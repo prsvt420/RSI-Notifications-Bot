@@ -11,6 +11,8 @@ python-dotenv = "^1.0.1"
 aiogram = "^3.4.1"
 sqlalchemy = "^2.0.29"
 aiosqlite = "^0.20.0"
+python-binance = "^1.0.19"
+ta-lib = {path = "C:/Users/admin/TA_Lib-0.4.28-cp311-cp311-win_amd64.whl"}
 
 
 [build-system]

@@ -3,6 +3,7 @@ import logging
 
 from aiogram import Bot, Dispatcher
 
+import utils
 from handlers import router
 from models import async_model_main
 
@@ -15,8 +16,9 @@ async def main():
     bot = Bot(BOT_TOKEN)
     dp = Dispatcher()
     dp.include_router(router)
-
-    await dp.start_polling(bot)
+    rsi_task = asyncio.create_task(utils.send_notification(bot))
+    dp_task = asyncio.create_task(dp.start_polling(bot))
+    await asyncio.gather(rsi_task, dp_task)
 
 
 if __name__ == "__main__":
