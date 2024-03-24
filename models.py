@@ -1,5 +1,5 @@
 import sqlalchemy
-from sqlalchemy import exists
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped
 
@@ -40,6 +40,14 @@ async def insert_user_if_not_exist(message):
 
         if not await check_user_exist(session, user_id):
             await insert_user(session, user_id)
+
+
+async def update_notifications_status(telegram_id: int, is_notifications: bool):
+    async with async_session() as session:
+        user = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = user.scalars().first()
+        user.is_notifications = is_notifications
+        await session.commit()
 
 
 async def async_model_main():
