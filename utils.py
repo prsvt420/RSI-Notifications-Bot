@@ -14,6 +14,7 @@ load_dotenv()
 API = os.environ.get("API")
 SECRET_KEY = os.environ.get("SECRET_KEY")
 client = Client(API, SECRET_KEY)
+sent_notifications = set()
 
 
 def get_klines_data(symbol, interval, limit):
@@ -38,27 +39,45 @@ async def get_rci(symbol, interval, limit):
     return rsi
 
 
-async def send_notification(bot):
-    is_buy = False
-    is_sell = False
+async def handle_notifications(bot):
+    asyncio.create_task(clear_old_notifications())
 
     while True:
-        rsi = await get_rci("BTCUSDT", "15m", 200)
-        print(rsi)
-        if (rsi <= 30 and not is_buy) or (rsi >= 70 and not is_sell):
-            users = await models.select_all_users()
-            for user in users:
-                if not user.is_notifications:
-                    continue
+        notifications = await models.select_notifications()
 
-                if rsi <= 30 and not is_buy:
-                    is_buy = True
-                    message = f"""BTCUSDT. Текущий RSI: ~{rsi:.2f}"""
-                    await bot.send_message(user.telegram_id, message)
+        for notification in notifications:
+            users = await models.select_users_by_notification_id(notification.id)
 
-                if rsi >= 70 and not is_sell:
-                    is_sell = True
-                    message = f"""BTCUSDT. Текущий RSI: ~{rsi:.2f}"""
-                    await bot.send_message(user.telegram_id, message)
+            if users:
+                await send_notification_to_users(bot, users, notification)
 
         await asyncio.sleep(2)
+
+
+async def send_notification_to_users(bot, users, notification):
+    for user in users:
+        symbol = notification.symbol
+        interval = notification.interval
+        user_telegram_id = user.telegram_id
+
+        if (user_telegram_id, symbol) not in sent_notifications:
+            rsi_by_symbol = await get_rci(symbol, interval, 200)
+            is_overbought_oversold = (rsi_by_symbol <= 30 or rsi_by_symbol >= 70)
+
+            if is_overbought_oversold:
+
+                if rsi_by_symbol <= 30:
+                    message = f"""Oversold |{symbol}. Текущий RSI: ~{rsi_by_symbol:.2f}"""
+                    await bot.send_message(user_telegram_id, message)
+
+                if rsi_by_symbol >= 70:
+                    message = f"""Overbought | {symbol}. Текущий RSI: ~{rsi_by_symbol:.2f}"""
+                    await bot.send_message(user_telegram_id, message)
+
+                sent_notifications.add((user_telegram_id, symbol))
+
+
+async def clear_old_notifications():
+    while True:
+        await asyncio.sleep(900)
+        sent_notifications.clear()

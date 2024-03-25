@@ -16,8 +16,9 @@ async def main():
     bot = Bot(BOT_TOKEN)
     dp = Dispatcher()
     dp.include_router(router)
-    rsi_task = asyncio.create_task(utils.send_notification(bot))
+    rsi_task = asyncio.create_task(utils.handle_notifications(bot))
     dp_task = asyncio.create_task(dp.start_polling(bot))
+
     await asyncio.gather(rsi_task, dp_task)
 
 
