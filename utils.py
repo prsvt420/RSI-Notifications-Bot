@@ -2,7 +2,7 @@ import asyncio
 import os
 
 import numpy
-import requests
+import aiohttp
 import talib
 from binance.client import Client
 from dotenv import load_dotenv
@@ -17,24 +17,24 @@ client = Client(API, SECRET_KEY)
 sent_notifications = set()
 
 
-def get_klines_data(symbol, interval, limit):
+async def get_klines_data(symbol, interval, limit):
     url = 'https://www.binance.com/api/v3/klines'
     params = {
         'symbol': symbol,
         'interval': interval,
         'limit': limit
     }
-    response = requests.get(url=url, params=params)
-    klines_data = []
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url=url, params=params) as response:
+            response_data = await response.json()
 
-    for kline in response.json():
-        klines_data.append(float(kline[4]))
+            klines_data = [float(kline[4]) for kline in response_data]
 
-    return numpy.array(klines_data)
+            return numpy.array(klines_data)
 
 
 async def get_rci(symbol, interval, limit):
-    data = get_klines_data(symbol, interval, limit)
+    data = await get_klines_data(symbol, interval, limit)
     rsi = talib.RSI(data, 7)[-1]
     return rsi
 
