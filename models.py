@@ -48,6 +48,13 @@ class NotificationUser(Base):
         return f"{self.user_id} - {self.notification_id}"
 
 
+async def select_user_id_by_telegram_id(telegram_id):
+    async with async_session() as session:
+        user = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = user.scalars().first()
+    return user.id
+
+
 async def check_user_exist(session, user_id):
     user_exists = await session.scalar(exists().where(User.telegram_id == user_id).select())
     return user_exists
@@ -83,6 +90,16 @@ async def select_notifications():
     return notifications.scalars().all()
 
 
+async def select_user_notifications_by_user_id(user_id):
+    async with async_session() as session:
+        notifications = await session.execute(
+            select(Notification).join(NotificationUser)
+            .where(Notification.is_active == 1)
+            .where(NotificationUser.user_id == user_id)
+        )
+    return notifications.scalars().all()
+
+
 async def select_users_by_notification_id(notification_id):
     async with async_session() as session:
         users = await session.execute(
@@ -92,6 +109,28 @@ async def select_users_by_notification_id(notification_id):
             .where(User.is_notifications == 1)
         )
     return users.scalars().all()
+
+
+async def select_notification_by_user_id_and_notification_id(user_id, notification_id):
+    async with async_session() as session:
+        notification = await session.execute(
+            select(NotificationUser).join(Notification).join(User)
+            .where(User.id == user_id)
+            .where(Notification.id == notification_id)
+        )
+    return notification.scalars().first()
+
+
+async def update_user_notification_status(user_notification, is_active):
+    async with async_session() as session:
+        user_notification = await session.execute(
+            select(NotificationUser).join(Notification).join(User)
+            .where(User.id == user_notification.user_id)
+            .where(Notification.id == user_notification.notification_id)
+        )
+        user_notification = user_notification.scalars().first()
+        user_notification.is_active = is_active
+        await session.commit()
 
 
 async def async_model_main():
