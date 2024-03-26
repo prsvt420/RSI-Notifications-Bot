@@ -7,7 +7,7 @@ start_keyboard = InlineKeyboardMarkup(inline_keyboard=[
 notifications_menu = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='Управление уведомлениями\U0001F514', callback_data='notifications_settings')],
     [InlineKeyboardButton(
-        text='Посмотреть список включенных уведомлений\U0001F4DD', callback_data='user_notifications_list'
+        text='Список ваших уведомлений\U0001F4DD', callback_data='user_notifications_list'
     )],
 ])
 
