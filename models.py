@@ -154,6 +154,16 @@ async def select_notification_by_symbol_and_interval(symbol, interval):
     return notification.scalars().first()
 
 
+async def select_user_notification_by_user_id_and_notification_id(user_id, notification_id):
+    async with async_session() as session:
+        user_notification = await session.execute(
+            select(NotificationUser).join(Notification).join(User)
+            .where(User.id == user_id)
+            .where(Notification.id == notification_id)
+        )
+    return user_notification.scalars().first()
+
+
 async def update_notifications_status(telegram_id: int, is_notifications: bool):
     async with async_session() as session:
         user = await session.execute(select(User).where(User.telegram_id == telegram_id))

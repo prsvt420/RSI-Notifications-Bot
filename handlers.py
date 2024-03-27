@@ -58,9 +58,12 @@ async def user_notifications_list(callback: CallbackQuery):
     user_id = await models.select_user_id_by_telegram_id(telegram_id)
     notifications = await models.select_user_notifications_by_user_id(user_id)
     notifications_buttons = await keyboards.create_buttons_for_user_notifications(notifications)
-    text = f'Ваши уведомления: \n' + '\n'.join(
-        [f'{index}.  \U0001F4CC ' + str(notification) for index, notification in enumerate(notifications, start=1)]
-    )
+    text = f'Ваши уведомления: \n'
+    for index, notification in enumerate(notifications):
+        user_notification = await models.select_user_notification_by_user_id_and_notification_id(user_id,
+                                                                                                 notification.id)
+        status = '\U00002705' if user_notification.is_active else '\U0000274C'
+        text += f'{index + 1}. {status} {notification.symbol} - {notification.interval}\n'
     await callback.message.reply(text=text, reply_markup=notifications_buttons)
 
 
@@ -84,7 +87,7 @@ async def process_notification_status_change(callback, status):
         selected_notification.id
     )
     await models.update_user_notification_status(selected_user_notification, status)
-    status_text = 'выключено\U0001F514' if not status else 'включено\U0001F515'
+    status_text = 'выключено\U0001F515' if not status else 'включено\U0001F514'
     await callback.message.reply(text=f'Уведомление {status_text}')
 
 
@@ -103,7 +106,7 @@ async def add_new_notification(callback: CallbackQuery):
     global if_new_notification
     if_new_notification = True
     await callback.answer('')
-    await callback.message.reply(text='Введите новое желаемое уведомление в формате SYMBOL - INTERVAL')
+    await callback.message.reply(text='Введите новое уведомление в формате SYMBOL - INTERVAL')
 
 
 @router.message(lambda message: re.match(r'^([A-Za-z]+)\s*-\s*([0-9]+[smh])$', message.text))
