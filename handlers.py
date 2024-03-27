@@ -14,7 +14,8 @@ if_new_notification = False
 
 @router.message(CommandStart())
 async def bot_start(message: Message):
-    await models.insert_user_if_not_exist(message)
+    telegram_id = message.from_user.id
+    await models.insert_user_if_not_exist(telegram_id)
     await message.reply(f'Приветствую тебя! Начнем?', reply_markup=keyboards.start_keyboard)
 
 
@@ -120,10 +121,10 @@ async def new_notification_handler(message: Message):
         telegram_id = message.from_user.id
         user_id = await models.select_user_id_by_telegram_id(telegram_id)
 
-        await models.insert_new_notification(symbol, interval)
+        await models.insert_notification(symbol, interval)
 
         notification = await models.select_notification_by_symbol_and_interval(symbol, interval)
-        answer = await models.insert_new_user_notification(notification, user_id)
+        answer = await models.insert_user_notification(notification.id, user_id)
 
         if answer:
             await message.reply(text='Уведомление добавлено\U00002699')

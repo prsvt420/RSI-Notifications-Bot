@@ -48,25 +48,22 @@ class NotificationUser(Base):
         return f"{self.user_id} - {self.notification_id}"
 
 
-async def check_user_exist(session, telegram_id):
-    user_exists = await session.scalar(exists().where(User.telegram_id == telegram_id).select())
-    return user_exists
+async def is_user_exist(session, telegram_id):
+    return bool(await session.scalar(exists().where(User.telegram_id == telegram_id).select()))
 
 
-async def check_notification_exist(session, symbol, interval):
-    notification_exists = await session.scalar(
+async def is_notification_exist(session, symbol, interval):
+    return bool(await session.scalar(
         exists().where(Notification.symbol == symbol).where(Notification.interval == interval).select()
-    )
-    return notification_exists
+    ))
 
 
-async def check_user_notification_exist(session, user_id, notification_id):
-    user_notification_exists = await session.scalar(
+async def is_user_notification_exist(session, user_id, notification_id):
+    return bool(await session.scalar(
         exists()
         .where(NotificationUser.user_id == user_id)
         .where(NotificationUser.notification_id == notification_id).select()
-    )
-    return user_notification_exists
+    ))
 
 
 async def insert_user(session, telegram_id):
@@ -75,27 +72,28 @@ async def insert_user(session, telegram_id):
     await session.commit()
 
 
-async def insert_user_if_not_exist(message):
+async def insert_user_if_not_exist(telegram_id):
     async with async_session() as session:
-        telegram_id = message.from_user.id
-        user_is_exist = await check_user_exist(session, telegram_id)
-
-        if not await check_user_exist(session, telegram_id):
+        if not await is_user_exist(session, telegram_id):
             await insert_user(session, telegram_id)
+            return True
+        return False
 
 
-async def insert_new_notification(symbol, interval):
+async def insert_notification(symbol, interval):
     async with async_session() as session:
-        if not await check_notification_exist(session, symbol, interval):
+        if not await is_notification_exist(session, symbol, interval):
             notification = Notification(symbol=symbol, interval=interval, is_active=True)
             session.add(notification)
             await session.commit()
+            return True
+        return False
 
 
-async def insert_new_user_notification(notification, user_id):
+async def insert_user_notification(notification_id, user_id):
     async with async_session() as session:
-        if not await check_user_notification_exist(session, user_id, notification.id):
-            user_notification = NotificationUser(user_id=user_id, notification_id=notification.id, is_active=True)
+        if not await is_user_notification_exist(session, user_id, notification_id):
+            user_notification = NotificationUser(user_id=user_id, notification_id=notification_id, is_active=True)
             session.add(user_notification)
             await session.commit()
             return True
