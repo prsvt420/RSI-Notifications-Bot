@@ -9,6 +9,7 @@ notifications_menu = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(
         text='Список ваших уведомлений\U0001F4DD', callback_data='user_notifications_list'
     )],
+    [InlineKeyboardButton(text='Добавить новое уведомление\U0001F514', callback_data='add_new_notification')],
 ])
 
 notifications_settings_menu = InlineKeyboardMarkup(inline_keyboard=[

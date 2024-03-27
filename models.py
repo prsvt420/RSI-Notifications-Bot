@@ -48,39 +48,65 @@ class NotificationUser(Base):
         return f"{self.user_id} - {self.notification_id}"
 
 
-async def select_user_id_by_telegram_id(telegram_id):
-    async with async_session() as session:
-        user = await session.execute(select(User).where(User.telegram_id == telegram_id))
-        user = user.scalars().first()
-    return user.id
-
-
-async def check_user_exist(session, user_id):
-    user_exists = await session.scalar(exists().where(User.telegram_id == user_id).select())
+async def check_user_exist(session, telegram_id):
+    user_exists = await session.scalar(exists().where(User.telegram_id == telegram_id).select())
     return user_exists
 
 
-async def insert_user(session, user_id):
-    user = User(telegram_id=user_id)
+async def check_notification_exist(session, symbol, interval):
+    notification_exists = await session.scalar(
+        exists().where(Notification.symbol == symbol).where(Notification.interval == interval).select()
+    )
+    return notification_exists
+
+
+async def check_user_notification_exist(session, user_id, notification_id):
+    user_notification_exists = await session.scalar(
+        exists()
+        .where(NotificationUser.user_id == user_id)
+        .where(NotificationUser.notification_id == notification_id).select()
+    )
+    return user_notification_exists
+
+
+async def insert_user(session, telegram_id):
+    user = User(telegram_id=telegram_id)
     session.add(user)
     await session.commit()
 
 
 async def insert_user_if_not_exist(message):
     async with async_session() as session:
-        user_id = message.from_user.id
-        user_is_exist = await check_user_exist(session, user_id)
+        telegram_id = message.from_user.id
+        user_is_exist = await check_user_exist(session, telegram_id)
 
-        if not await check_user_exist(session, user_id):
-            await insert_user(session, user_id)
+        if not await check_user_exist(session, telegram_id):
+            await insert_user(session, telegram_id)
 
 
-async def update_notifications_status(telegram_id: int, is_notifications: bool):
+async def insert_new_notification(symbol, interval):
+    async with async_session() as session:
+        if not await check_notification_exist(session, symbol, interval):
+            notification = Notification(symbol=symbol, interval=interval, is_active=True)
+            session.add(notification)
+            await session.commit()
+
+
+async def insert_new_user_notification(notification, user_id):
+    async with async_session() as session:
+        if not await check_user_notification_exist(session, user_id, notification.id):
+            user_notification = NotificationUser(user_id=user_id, notification_id=notification.id, is_active=True)
+            session.add(user_notification)
+            await session.commit()
+            return True
+        return False
+
+
+async def select_user_id_by_telegram_id(telegram_id):
     async with async_session() as session:
         user = await session.execute(select(User).where(User.telegram_id == telegram_id))
         user = user.scalars().first()
-        user.is_notifications = is_notifications
-        await session.commit()
+    return user.id
 
 
 async def select_notifications():
@@ -119,6 +145,23 @@ async def select_notification_by_user_id_and_notification_id(user_id, notificati
             .where(Notification.id == notification_id)
         )
     return notification.scalars().first()
+
+
+async def select_notification_by_symbol_and_interval(symbol, interval):
+    async with async_session() as session:
+        notification = await session.execute(
+            select(Notification).where(Notification.symbol == symbol)
+            .where(Notification.interval == interval)
+        )
+    return notification.scalars().first()
+
+
+async def update_notifications_status(telegram_id: int, is_notifications: bool):
+    async with async_session() as session:
+        user = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = user.scalars().first()
+        user.is_notifications = is_notifications
+        await session.commit()
 
 
 async def update_user_notification_status(user_notification, is_active):

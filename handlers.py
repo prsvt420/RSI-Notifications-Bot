@@ -1,11 +1,15 @@
+import re
+
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery
 
 import keyboards
 import models
+from utils import get_klines_data
 
 router = Router()
+if_new_notification = False
 
 
 @router.message(CommandStart())
@@ -91,3 +95,41 @@ async def notification_off(callback: CallbackQuery):
 @router.callback_query(F.data == 'notification_off')
 async def notification_off(callback: CallbackQuery):
     await process_notification_status_change(callback, False)
+
+
+@router.callback_query(F.data == 'add_new_notification')
+async def add_new_notification(callback: CallbackQuery):
+    global if_new_notification
+    if_new_notification = True
+    await callback.answer('')
+    await callback.message.reply(text='Введите новое желаемое уведомление в формате SYMBOL - INTERVAL')
+
+
+@router.message(lambda message: re.match(r'^([A-Za-z]+)\s*-\s*([0-9]+[smh])$', message.text))
+async def new_notification_handler(message: Message):
+    global if_new_notification
+
+    if not if_new_notification:
+        return
+
+    symbol, interval = message.text.split('-')
+    symbol, interval = symbol.strip(), interval.strip()
+
+    try:
+        is_exist_api = await get_klines_data(symbol, interval, 200)
+        telegram_id = message.from_user.id
+        user_id = await models.select_user_id_by_telegram_id(telegram_id)
+
+        await models.insert_new_notification(symbol, interval)
+
+        notification = await models.select_notification_by_symbol_and_interval(symbol, interval)
+        answer = await models.insert_new_user_notification(notification, user_id)
+
+        if answer:
+            await message.reply(text='Уведомление добавлено\U00002699')
+        else:
+            await message.reply(text='Такое уведомление уже существует\U00002699')
+    except IndexError:
+        await message.reply(text='Такого символа или интервала не существует\U00002699')
+
+    if_new_notification = False
