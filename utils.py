@@ -81,3 +81,21 @@ async def clear_old_notifications():
     while True:
         await asyncio.sleep(900)
         sent_notifications.clear()
+
+
+async def russian_unit_handler(interval):
+    number = interval[:-1]
+    unit = interval[-1]
+
+    russian_unit = {
+        'м': 'm',
+        'ч': 'h',
+        'М': 'M',
+        'д': 'd',
+        'н': 'w',
+    }
+
+    if unit in russian_unit:
+        unit = russian_unit[unit]
+
+    return number + unit

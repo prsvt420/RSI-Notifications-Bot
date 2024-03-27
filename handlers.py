@@ -6,6 +6,7 @@ from aiogram.types import Message, CallbackQuery
 
 import keyboards
 import models
+import utils
 from utils import get_klines_data
 
 router = Router()
@@ -109,7 +110,7 @@ async def add_new_notification(callback: CallbackQuery):
     await callback.message.reply(text='Введите новое уведомление в формате SYMBOL - INTERVAL')
 
 
-@router.message(lambda message: re.match(r'^([A-Za-z]+)\s*-\s*([0-9]+[smh])$', message.text))
+@router.message(lambda message: re.match(r'^([А-ЯA-Za-z]+)\s*-\s*([0-9]+[mhMdwмчМдн])$', message.text))
 async def new_notification_handler(message: Message):
     global if_new_notification
 
@@ -118,6 +119,8 @@ async def new_notification_handler(message: Message):
 
     symbol, interval = message.text.split('-')
     symbol, interval = symbol.strip(), interval.strip()
+
+    interval = await utils.russian_unit_handler(interval)
 
     try:
         is_exist_api = await get_klines_data(symbol, interval, 200)
