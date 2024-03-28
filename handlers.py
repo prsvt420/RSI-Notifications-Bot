@@ -63,8 +63,10 @@ async def user_notifications_list(callback: CallbackQuery):
     for index, notification in enumerate(notifications):
         user_notification = await models.select_user_notification_by_user_id_and_notification_id(user_id,
                                                                                                  notification.id)
+        russian_text_interval = await utils.get_interval_text(notification.interval, 'ru')
+        english_text_interval = await utils.get_interval_text(notification.interval, 'en')
         status = '\U00002705' if user_notification.is_active else '\U0000274C'
-        text += f'{index + 1}. {status} {notification.symbol} - {notification.interval}\n'
+        text += f'{index + 1}. {status} {notification.symbol} - {english_text_interval} | {russian_text_interval}\n'
     await callback.message.reply(text=text, reply_markup=notifications_buttons)
 
 

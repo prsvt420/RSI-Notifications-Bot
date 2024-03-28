@@ -24,6 +24,7 @@ async def get_klines_data(symbol, interval, limit):
         'interval': interval,
         'limit': limit
     }
+    print(url + '?' + '&'.join([f'{key}={value}' for key, value in params.items()]))
     async with aiohttp.ClientSession() as session:
         async with session.get(url=url, params=params) as response:
             response_data = await response.json()
@@ -99,3 +100,28 @@ async def russian_unit_handler(interval):
         unit = russian_unit[unit]
 
     return number + unit
+
+
+async def get_interval_text(interval: str, language: str) -> str:
+    intervals = {
+        '1m': ('1 минута', '1 minute'),
+        '3m': ('3 минуты', '3 minutes'),
+        '5m': ('5 минут', '5 minutes'),
+        '15m': ('15 минут', '15 minutes'),
+        '30m': ('30 минут', '30 minutes'),
+        '1h': ('1 час', '1 hour'),
+        '2h': ('2 часа', '2 hours'),
+        '4h': ('4 часа', '4 hours'),
+        '6h': ('6 часов', '6 hours'),
+        '8h': ('8 часов', '8 hours'),
+        '12h': ('12 часов', '12 hours'),
+        '1d': ('1 день', '1 day'),
+        '3d': ('3 дня', '3 days'),
+        '1w': ('1 неделя', '1 week'),
+        '1M': ('1 месяц', '1 month'),
+    }
+
+    if language == 'ru':
+        return intervals.get(interval, 'Интервал не найден')[0]
+    elif language == 'en':
+        return intervals.get(interval, 'Interval not found')[1]
