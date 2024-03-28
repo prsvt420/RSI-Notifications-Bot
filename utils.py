@@ -60,22 +60,30 @@ async def send_notification_to_users(bot, users, notification):
         symbol = notification.symbol
         interval = notification.interval
         user_telegram_id = user.telegram_id
+        rsi_by_symbol = await get_rci(symbol, interval, 200)
+        rsi_status = await get_rsi_status(rsi_by_symbol)
 
-        if (user_telegram_id, symbol) not in sent_notifications:
-            rsi_by_symbol = await get_rci(symbol, interval, 200)
-            is_overbought_oversold = (rsi_by_symbol <= 30 or rsi_by_symbol >= 70)
+        if not rsi_status or (user_telegram_id, interval, symbol, rsi_status) not in sent_notifications:
+            if rsi_by_symbol <= 30:
+                message = f"""Oversold |{symbol}. Текущий RSI: ~{rsi_by_symbol:.2f}"""
+                await bot.send_message(user_telegram_id, message)
 
-            if is_overbought_oversold:
+            if rsi_by_symbol >= 70:
+                message = f"""Overbought | {symbol}. Текущий RSI: ~{rsi_by_symbol:.2f}"""
+                await bot.send_message(user_telegram_id, message)
 
-                if rsi_by_symbol <= 30:
-                    message = f"""Oversold |{symbol}. Текущий RSI: ~{rsi_by_symbol:.2f}"""
-                    await bot.send_message(user_telegram_id, message)
+            sent_notifications.add((user_telegram_id, interval, symbol, rsi_status))
 
-                if rsi_by_symbol >= 70:
-                    message = f"""Overbought | {symbol}. Текущий RSI: ~{rsi_by_symbol:.2f}"""
-                    await bot.send_message(user_telegram_id, message)
 
-                sent_notifications.add((user_telegram_id, symbol))
+async def get_rsi_status(rsi):
+    rsi_status = ''
+
+    if rsi >= 70:
+        rsi_status = 'Overbought'
+    elif rsi <= 30:
+        rsi_status = 'Oversold'
+
+    return rsi_status
 
 
 async def clear_old_notifications():
