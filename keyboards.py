@@ -39,6 +39,15 @@ buy_subscription = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='Продлить подписку\U0001F680', url='https://t.me/prsvt420')]
 ])
 
+admin_inline_keyboard_button = [
+    [InlineKeyboardButton(text='Админ меню\U0001F6E1', callback_data='admin_menu')]
+]
+
+admin_menu = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text='Продлить подписку пользователю\U0001F680', callback_data='to_extend_subscription')],
+    [InlineKeyboardButton(text='Назад\U0001F519', callback_data='menu')],
+])
+
 
 async def create_buttons_for_user_notifications(notifications):
     inline_keyboard = []

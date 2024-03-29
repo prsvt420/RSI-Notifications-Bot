@@ -91,6 +91,15 @@ async def is_user_notification_exist(session, user_id, notification_id):
     ))
 
 
+async def is_user_admin(telegram_id):
+    async with async_session() as session:
+        return bool(await session.scalar(
+            exists()
+            .where(User.telegram_id == telegram_id)
+            .where(User.is_superuser == 1).select()
+        ))
+
+
 async def insert_subscribed(session, telegram_id):
     subscription_end_datetime = datetime.strptime('2024-04-01 00:00:00', '%Y-%m-%d %H:%M:%S')
     subscribed = Subscribed(telegram_id=telegram_id, subscription_end_datetime=subscription_end_datetime)
@@ -123,7 +132,7 @@ async def insert_user_is_not_exist(telegram_id):
 async def insert_notification(symbol, interval):
     async with async_session() as session:
         if not await is_notification_exist(session, symbol, interval):
-            notification = Notification(symbol=symbol, interval=interval, is_active=True)
+            notification = Notification(symbol=symbol, interval=interval)
             session.add(notification)
             await session.commit()
             return True
@@ -226,6 +235,16 @@ async def update_user_notification_status(user_notification, is_active):
         )
         user_notification = user_notification.scalars().first()
         user_notification.is_active = is_active
+        await session.commit()
+
+
+async def update_subscription_end_datetime(telegram_id, subscription_end_datetime):
+    subscription_end_datetime = datetime.strptime(subscription_end_datetime, '%Y-%m-%d %H:%M:%S')
+
+    async with async_session() as session:
+        user_subscription = await session.execute(select(Subscribed).where(Subscribed.telegram_id == telegram_id))
+        user_subscription = user_subscription.scalars().first()
+        user_subscription.subscription_end_datetime = subscription_end_datetime
         await session.commit()
 
 

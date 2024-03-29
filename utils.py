@@ -1,19 +1,13 @@
 import asyncio
-import os
 
-import numpy
 import aiohttp
+import numpy
 import talib
 from binance.client import Client
-from dotenv import load_dotenv
 
 import models
 
-load_dotenv()
-
-API = os.environ.get("API")
-SECRET_KEY = os.environ.get("SECRET_KEY")
-client = Client(API, SECRET_KEY)
+client = Client()
 sent_notifications = set()
 
 

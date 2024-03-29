@@ -7,12 +7,14 @@ from aiogram.types import Message, CallbackQuery
 import keyboards
 import models
 import utils
-from filters import IsUserSubscribed
+from filters import IsUserSubscribed, IsAdmin
 from utils import get_klines_data
 
 router = Router()
-if_new_notification = False
+is_new_notification = False
+is_update_datetime_end_subscription = False
 new_notification_pattern = r'^([А-ЯA-Za-z]+)\s*-\s*([0-9]+[mhMdwмчМдн])$'
+extend_subscription_pattern = r'^[0-9]{10} - [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$'
 
 
 @router.message(CommandStart())
@@ -26,7 +28,13 @@ async def bot_start(message: Message):
 @router.callback_query(F.data == 'menu')
 async def menu(callback: CallbackQuery):
     await callback.answer('')
-    await callback.message.reply(text='Меню\U00002699', reply_markup=keyboards.menu)
+    markup = keyboards.menu
+    is_admin = await models.is_user_admin(callback.from_user.id)
+
+    if is_admin:
+        markup.inline_keyboard.extend(keyboards.admin_inline_keyboard_button)
+
+    await callback.message.reply(text='Меню\U00002699', reply_markup=markup)
 
 
 @router.callback_query(F.data == 'subscribe_notifications')
@@ -130,17 +138,17 @@ async def notification_off(callback: CallbackQuery):
 
 @router.callback_query(F.data == 'add_new_notification', IsUserSubscribed())
 async def add_new_notification(callback: CallbackQuery):
-    global if_new_notification
-    if_new_notification = True
+    global is_new_notification
+    is_new_notification = True
     await callback.answer('')
-    await callback.message.reply(text='Введите новое уведомление в формате SYMBOL - INTERVAL')
+    await callback.message.reply(text='Введите новое уведомление в формате [SYMBOL - INTERVAL]')
 
 
 @router.message(lambda message: re.match(new_notification_pattern, message.text), IsUserSubscribed())
 async def new_notification_handler(message: Message):
-    global if_new_notification
+    global is_new_notification
 
-    if not if_new_notification:
+    if not is_new_notification:
         return
 
     symbol, interval = message.text.split('-')
@@ -166,3 +174,36 @@ async def new_notification_handler(message: Message):
         await message.reply(text='Такого символа или интервала не существует\U00002699')
 
     if_new_notification = False
+
+
+@router.callback_query(F.data == 'admin_menu', IsAdmin())
+async def admin_menu(callback: CallbackQuery):
+    await callback.answer('')
+    await callback.message.reply(text='Выберите действие', reply_markup=keyboards.admin_menu)
+
+
+@router.callback_query(F.data == 'to_extend_subscription', IsAdmin())
+async def to_extend_subscription(callback: CallbackQuery):
+    global is_update_datetime_end_subscription
+
+    is_update_datetime_end_subscription = True
+
+    await callback.answer('')
+    await callback.message.reply(
+        text='Введите Telegram-ID и дату окончания подписки в формате [0123456789 - 2024-04-01 00:00:00]'
+    )
+
+
+@router.message(lambda message: re.match(extend_subscription_pattern, message.text), IsAdmin())
+async def extend_subscription_handler(message: Message):
+    global is_update_datetime_end_subscription
+
+    try:
+        telegram_id, subscription_end_datetime = message.text.split('-', 1)
+        telegram_id, subscription_end_datetime = telegram_id.strip(), subscription_end_datetime.strip()
+        await models.update_subscription_end_datetime(telegram_id, subscription_end_datetime)
+        await message.reply(text='Подписка обновлена\U00002699')
+    except ValueError:
+        await message.reply(text='Был введен неверный формат\U00002699')
+
+    is_update_datetime_end_subscription = False
