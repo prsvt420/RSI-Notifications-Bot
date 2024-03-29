@@ -24,11 +24,10 @@ async def get_klines_data(symbol, interval, limit):
         'interval': interval,
         'limit': limit
     }
-    print(url + '?' + '&'.join([f'{key}={value}' for key, value in params.items()]))
+
     async with aiohttp.ClientSession() as session:
         async with session.get(url=url, params=params) as response:
             response_data = await response.json()
-
             klines_data = [float(kline[4]) for kline in response_data]
 
             return numpy.array(klines_data)
@@ -36,12 +35,11 @@ async def get_klines_data(symbol, interval, limit):
 
 async def get_rci(symbol, interval, limit):
     data = await get_klines_data(symbol, interval, limit)
-    rsi = talib.RSI(data, 7)[-1]
+    rsi = talib.RSI(data, 14)[-1]
     return rsi
 
 
 async def handle_notifications(bot):
-    asyncio.create_task(clear_old_notifications())
 
     while True:
         notifications = await models.select_notifications()
@@ -64,15 +62,38 @@ async def send_notification_to_users(bot, users, notification):
         rsi_status = await get_rsi_status(rsi_by_symbol)
 
         if not rsi_status or (user_telegram_id, interval, symbol, rsi_status) not in sent_notifications:
-            if rsi_by_symbol <= 30:
-                message = f"""Oversold |{symbol}. Текущий RSI: ~{rsi_by_symbol:.2f}"""
-                await bot.send_message(user_telegram_id, message)
-
-            if rsi_by_symbol >= 70:
-                message = f"""Overbought | {symbol}. Текущий RSI: ~{rsi_by_symbol:.2f}"""
+            message = await get_message_text(symbol, interval, rsi_by_symbol, rsi_status)
+            if message:
                 await bot.send_message(user_telegram_id, message)
 
             sent_notifications.add((user_telegram_id, interval, symbol, rsi_status))
+
+
+async def get_message_text(symbol, interval, rsi, rsi_status):
+    rsi_status = await get_rsi_status(rsi)
+    rsi = round(rsi, 2)
+
+    russian_text_interval = await get_interval_text(interval, 'ru')
+    english_text_interval = await get_interval_text(interval, 'en')
+    price_symbol = await get_price_symbol(symbol)
+
+    status_emoji = ''
+
+    if rsi_status == 'Overbought':
+        status_emoji = '\U0001F4C8'
+    elif rsi_status == 'Oversold':
+        status_emoji = '\U0001F4C9'
+
+    if rsi_status == 'Overbought' or rsi_status == 'Oversold':
+        return (f'\U000026A1 Symbol: {symbol}\n'
+                f'{status_emoji} Status: {rsi_status}\n'
+                f'\U0001F4CA RSI: {rsi}\n'
+                f'\U0001F4B8 Price: {price_symbol}$\n'
+                f'\U0001F551 Interval: {english_text_interval} | {russian_text_interval}')
+
+
+async def get_price_symbol(symbol):
+    return round(float(client.get_symbol_ticker(symbol=symbol)['price']), 2)
 
 
 async def get_rsi_status(rsi):

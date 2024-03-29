@@ -120,7 +120,7 @@ async def new_notification_handler(message: Message):
         return
 
     symbol, interval = message.text.split('-')
-    symbol, interval = symbol.strip(), interval.strip()
+    symbol, interval = symbol.strip().upper(), interval.strip()
 
     interval = await utils.russian_unit_handler(interval)
 
