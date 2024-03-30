@@ -7,7 +7,7 @@ from aiogram.types import Message, CallbackQuery
 import keyboards
 import models
 import utils
-from filters import IsUserSubscribed, IsAdmin
+from filters import IsUserSubscribed, IsAdmin, IsUserExist
 from utils import get_klines_data
 
 router = Router()
@@ -25,19 +25,19 @@ async def bot_start(message: Message):
     await message.reply(f'Приветствую тебя! Начнем?', reply_markup=keyboards.start_keyboard)
 
 
-@router.callback_query(F.data == 'menu')
+@router.callback_query(F.data == 'menu', IsUserExist())
 async def menu(callback: CallbackQuery):
     await callback.answer('')
     markup = keyboards.menu
     is_admin = await models.is_user_admin(callback.from_user.id)
 
-    if is_admin:
-        markup.inline_keyboard.extend(keyboards.admin_inline_keyboard_button)
+    if is_admin and keyboards.admin_inline_keyboard_button not in markup.inline_keyboard:
+        markup.inline_keyboard.append(keyboards.admin_inline_keyboard_button)
 
     await callback.message.reply(text='Меню\U00002699', reply_markup=markup)
 
 
-@router.callback_query(F.data == 'subscribe_notifications')
+@router.callback_query(F.data == 'subscribe_notifications', IsUserExist())
 async def subscribe_notifications(callback: CallbackQuery):
     await callback.answer('')
     telegram_id = callback.from_user.id
@@ -52,13 +52,13 @@ async def subscribe_notifications(callback: CallbackQuery):
     await callback.message.reply(message, reply_markup=keyboards.subscribe_menu)
 
 
-@router.callback_query(F.data == 'notifications_menu', IsUserSubscribed())
+@router.callback_query(F.data == 'notifications_menu', IsUserExist(), IsUserSubscribed())
 async def notifications_menu(callback: CallbackQuery):
     await callback.answer('')
     await callback.message.reply(text='Меню уведомлений\U0001F9FE', reply_markup=keyboards.notifications_menu)
 
 
-@router.callback_query(F.data == 'notifications_settings', IsUserSubscribed())
+@router.callback_query(F.data == 'notifications_settings', IsUserExist(), IsUserSubscribed())
 async def notifications_settings(callback: CallbackQuery):
     await callback.answer('')
     await callback.message.reply(
@@ -74,17 +74,17 @@ async def process_notifications_status_change(callback, status):
     await callback.message.reply(text=f'Уведомления {status_text}')
 
 
-@router.callback_query(F.data == 'notifications_on', IsUserSubscribed())
+@router.callback_query(F.data == 'notifications_on', IsUserExist(), IsUserSubscribed())
 async def notifications_on(callback: CallbackQuery):
     await process_notifications_status_change(callback, True)
 
 
-@router.callback_query(F.data == 'notifications_off', IsUserSubscribed())
+@router.callback_query(F.data == 'notifications_off', IsUserExist(), IsUserSubscribed())
 async def notifications_off(callback: CallbackQuery):
     await process_notifications_status_change(callback, False)
 
 
-@router.callback_query(F.data == 'user_notifications_list', IsUserSubscribed())
+@router.callback_query(F.data == 'user_notifications_list', IsUserExist(), IsUserSubscribed())
 async def user_notifications_list(callback: CallbackQuery):
     await callback.answer('')
     telegram_id = callback.from_user.id
@@ -102,7 +102,7 @@ async def user_notifications_list(callback: CallbackQuery):
     await callback.message.reply(text=text, reply_markup=notifications_buttons)
 
 
-@router.callback_query(F.data.isdigit(), IsUserSubscribed())
+@router.callback_query(F.data.isdigit(), IsUserExist(), IsUserSubscribed())
 async def button_notification_select(callback: CallbackQuery):
     await callback.answer('')
     await callback.message.reply(text=f'Настройка уведомления {int(callback.data) + 1}\U00002699',
@@ -126,17 +126,17 @@ async def process_notification_status_change(callback, status):
     await callback.message.reply(text=f'Уведомление {status_text}')
 
 
-@router.callback_query(F.data == 'notification_on', IsUserSubscribed())
+@router.callback_query(F.data == 'notification_on', IsUserExist(), IsUserSubscribed())
 async def notification_off(callback: CallbackQuery):
     await process_notification_status_change(callback, True)
 
 
-@router.callback_query(F.data == 'notification_off', IsUserSubscribed())
+@router.callback_query(F.data == 'notification_off', IsUserExist(), IsUserSubscribed())
 async def notification_off(callback: CallbackQuery):
     await process_notification_status_change(callback, False)
 
 
-@router.callback_query(F.data == 'add_new_notification', IsUserSubscribed())
+@router.callback_query(F.data == 'add_new_notification', IsUserExist(), IsUserSubscribed())
 async def add_new_notification(callback: CallbackQuery):
     global is_new_notification
     is_new_notification = True
@@ -144,7 +144,7 @@ async def add_new_notification(callback: CallbackQuery):
     await callback.message.reply(text='Введите новое уведомление в формате [SYMBOL - INTERVAL]')
 
 
-@router.message(lambda message: re.match(new_notification_pattern, message.text), IsUserSubscribed())
+@router.message(lambda message: re.match(new_notification_pattern, message.text), IsUserExist(), IsUserSubscribed())
 async def new_notification_handler(message: Message):
     global is_new_notification
 
@@ -176,13 +176,13 @@ async def new_notification_handler(message: Message):
     if_new_notification = False
 
 
-@router.callback_query(F.data == 'admin_menu', IsAdmin())
+@router.callback_query(F.data == 'admin_menu', IsUserExist(), IsAdmin())
 async def admin_menu(callback: CallbackQuery):
     await callback.answer('')
     await callback.message.reply(text='Выберите действие', reply_markup=keyboards.admin_menu)
 
 
-@router.callback_query(F.data == 'to_extend_subscription', IsAdmin())
+@router.callback_query(F.data == 'to_extend_subscription', IsUserExist(), IsAdmin())
 async def to_extend_subscription(callback: CallbackQuery):
     global is_update_datetime_end_subscription
 

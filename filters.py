@@ -24,3 +24,14 @@ class IsAdmin(BaseFilter):
         is_admin = await models.is_user_admin(telegram_id)
 
         return is_admin
+
+
+class IsUserExist(BaseFilter):
+
+    async def __call__(self, callback: CallbackQuery):
+        telegram_id = callback.from_user.id
+
+        await models.insert_user_is_not_exist(telegram_id)
+        await models.insert_subscribed_is_not_exist(telegram_id)
+
+        return True
