@@ -17,11 +17,9 @@ new_notification_pattern = r'^([А-ЯA-Za-z]+)\s*-\s*([0-9]+[mhMdwмчМдн])$'
 extend_subscription_pattern = r'^[0-9]{10} - [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$'
 
 
-@router.message(CommandStart())
+@router.message(CommandStart(), IsUserExist())
 async def bot_start(message: Message):
     telegram_id = message.from_user.id
-    await models.insert_user_is_not_exist(telegram_id)
-    await models.insert_subscribed_is_not_exist(telegram_id)
     await message.reply(f'Приветствую тебя! Начнем?', reply_markup=keyboards.start_keyboard)
 
 
@@ -43,6 +41,7 @@ async def subscribe_notifications(callback: CallbackQuery):
     telegram_id = callback.from_user.id
     is_subscribed = await models.is_user_subscribed(telegram_id)
     subscription_end_datetime = await models.select_subscription_end_datetime_by_telegram_id(telegram_id)
+    subscription_end_datetime = subscription_end_datetime.strftime('%d-%m-%Y %H:%M:%S')
 
     if is_subscribed:
         message = f'Подписка активна\U0001F48E\nОкончание подписки: {subscription_end_datetime}\U0000231B'

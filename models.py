@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import sqlalchemy
 from sqlalchemy import exists, select
@@ -101,7 +101,8 @@ async def is_user_admin(telegram_id):
 
 
 async def insert_subscribed(session, telegram_id):
-    subscription_end_datetime = datetime.strptime('2024-04-01 00:00:00', '%Y-%m-%d %H:%M:%S')
+    current_datetime = datetime.now()
+    subscription_end_datetime = current_datetime + timedelta(hours=24)
     subscribed = Subscribed(telegram_id=telegram_id, subscription_end_datetime=subscription_end_datetime)
     session.add(subscribed)
     await session.commit()
