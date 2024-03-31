@@ -58,7 +58,7 @@ async def send_notification_to_users(bot, users, notification):
         if not rsi_status or (user_telegram_id, interval, symbol, rsi_status) not in sent_notifications:
             message = await get_message_text(symbol, interval, rsi_by_symbol, rsi_status)
             if message:
-                await bot.send_message(user_telegram_id, message)
+                await bot.send_message(user_telegram_id, message, parse_mode='html')
 
             sent_notifications.add((user_telegram_id, interval, symbol, rsi_status))
 
@@ -79,7 +79,7 @@ async def get_message_text(symbol, interval, rsi, rsi_status):
         status_emoji = '\U0001F4C9'
 
     if rsi_status == 'Overbought' or rsi_status == 'Oversold':
-        return (f'\U000026A1 Symbol: {symbol}\n'
+        return (f'\U000026A1 <b>Symbol: {symbol}</b>\n'
                 f'{status_emoji} Status: {rsi_status}\n'
                 f'\U0001F4CA RSI: {rsi}\n'
                 f'\U0001F4B8 Price: {price_symbol}$\n'

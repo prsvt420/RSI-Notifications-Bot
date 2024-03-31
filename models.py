@@ -182,10 +182,11 @@ async def select_user_notifications_by_user_id(user_id):
 async def select_users_by_notification_id(notification_id):
     async with async_session() as session:
         users = await session.execute(
-            select(User).join(NotificationUser)
+            select(User).join(NotificationUser).join(Subscribed)
             .where(NotificationUser.notification_id == notification_id)
             .where(NotificationUser.is_active == 1)
             .where(User.is_notifications == 1)
+            .where(Subscribed.subscription_end_datetime > datetime.now())
         )
     return users.scalars().all()
 

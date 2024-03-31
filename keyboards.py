@@ -47,19 +47,45 @@ admin_menu = InlineKeyboardMarkup(inline_keyboard=[
 ])
 
 
-async def create_buttons_for_user_notifications(notifications):
+async def create_buttons_for_user_notifications(page, total_pages, start_index, end_index, notifications):
     inline_keyboard = []
     row = []
-
     for index, notification in enumerate(notifications):
+        index += start_index
         inline_keyboard_button = InlineKeyboardButton(text=str(index + 1), callback_data=str(index))
         row.append(inline_keyboard_button)
 
-        if len(row) == 4 or index == len(notifications) - 1:
+        if len(row) == 4 or index == end_index - 1:
             inline_keyboard.append(row)
             row = []
 
+    await create_pagination_buttons(inline_keyboard, page, total_pages)
     inline_keyboard.append([InlineKeyboardButton(text='Назад\U0001F519', callback_data='notifications_menu')])
     reply_keyboard_markup = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
-
     return reply_keyboard_markup
+
+
+async def create_pagination_buttons(inline_keyboard, page, total_pages):
+    if total_pages == 1:
+        inline_keyboard.append([
+            InlineKeyboardButton(text=' ', callback_data=' '),
+            InlineKeyboardButton(
+                text=f'{page}/{total_pages}',
+                callback_data=f'user_notifications_list?page={page}'
+            ),
+            InlineKeyboardButton(text=' ', callback_data=' ')
+        ])
+    else:
+        buttons = [
+            InlineKeyboardButton(text='←', callback_data=f'user_notifications_list_prev?page={page}'),
+            InlineKeyboardButton(
+                text=f'{page}/{total_pages}',
+                callback_data=f'user_notifications_list?page={page}'
+            ),
+            InlineKeyboardButton(text='→', callback_data=f'user_notifications_list_next?page={page}')
+        ]
+        if page == 1:
+            buttons[0] = InlineKeyboardButton(text=' ', callback_data=' ')
+        elif page == total_pages:
+            buttons[2] = InlineKeyboardButton(text=' ', callback_data=' ')
+        inline_keyboard.append(buttons)
